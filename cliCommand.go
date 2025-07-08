@@ -137,6 +137,53 @@ func catchCallback(_ *Config, cache *internal.Cache, parameters []string, pokede
 	return nil
 }
 
+func inspectCallback(_ *Config, cache *internal.Cache, parameters []string, pokedex map[string]internal.PokemonResponse) error {
+	if len(parameters) == 0 {
+		fmt.Print("No pokemon specified\n")
+		return nil
+	}
+
+	name := parameters[0]
+	pokemon, exists := pokedex[name]
+
+	if !exists {
+		fmt.Printf("you have not caught that pokemon\n")
+		return nil
+	}
+
+	fmt.Printf(`Name: %s
+Height: %d
+Weight:  %d
+`, pokemon.Name, pokemon.Height, pokemon.Weight)
+
+	fmt.Printf("Stats:\n")
+	for _, stat := range pokemon.Stats {
+		fmt.Printf("	-%s: %d\n", stat.Stat.Name, stat.BaseStat)
+	}
+
+	fmt.Printf("Types:\n")
+	for _, typeVal := range pokemon.Types {
+		fmt.Printf("	-%s\n", typeVal.Type.Name)
+	}
+
+	return nil
+}
+
+func pokedexCallback(_ *Config, cache *internal.Cache, parameters []string, pokedex map[string]internal.PokemonResponse) error {
+
+	if len(pokedex) == 0 {
+		fmt.Print("Youre pokedex is empty\n")
+		return nil
+	}
+
+	fmt.Print("Your Pokedex:\n")
+	for pokemon := range pokedex {
+		fmt.Printf("- %s\n", pokemon)
+	}
+
+	return nil
+}
+
 type cliCommand struct {
 	name        string
 	description string
@@ -177,6 +224,16 @@ func init() {
 			name:        "catch",
 			description: "catch pokemon",
 			callback:    catchCallback,
+		},
+		"inspect": {
+			name:        "inspect",
+			description: "inspect pokemon",
+			callback:    inspectCallback,
+		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "show your pokedex",
+			callback:    pokedexCallback,
 		},
 	}
 }
