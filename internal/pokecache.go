@@ -48,7 +48,7 @@ func (c *Cache) reapLoop(interval time.Duration) {
 		for range timer.C {
 			c.mu.Lock()
 			for key, value := range c.entries {
-				if value.createdAt.Second()+int(interval.Seconds()) > time.Now().Second() {
+				if time.Since(value.createdAt) > interval {
 					delete(c.entries, key)
 				}
 			}

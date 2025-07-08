@@ -5,18 +5,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 
 	"github.com/Alexeychuk/pokedex_go/internal"
 )
 
-func commandExit(config *Config, cache *internal.Cache) error {
+func commandExit(config *Config, cache *internal.Cache, _ []string, _ map[string]internal.PokemonResponse) error {
 	fmt.Printf("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return errors.New("Error!!!")
 }
 
-func helpCallback(config *Config, cache *internal.Cache) error {
+func helpCallback(config *Config, cache *internal.Cache, _ []string, _ map[string]internal.PokemonResponse) error {
 	fmt.Printf("Welcome to the Pokedex!\nUsage:\n\n")
 	for _, c := range commands {
 		fmt.Printf("%s: %s\n", c.name, c.description)
@@ -45,7 +46,7 @@ func getCachedOrNewMapData(cache *internal.Cache, url string) (internal.MapRespo
 	return mapData, nil
 }
 
-func mapCallback(config *Config, cache *internal.Cache) error {
+func mapCallback(config *Config, cache *internal.Cache, parameters []string, pokedex map[string]internal.PokemonResponse) error {
 
 	if config.Next == nil {
 		fmt.Print("You are on last page\n")
@@ -68,7 +69,7 @@ func mapCallback(config *Config, cache *internal.Cache) error {
 	return nil
 }
 
-func mapbCallback(config *Config, cache *internal.Cache) error {
+func mapbCallback(config *Config, cache *internal.Cache, parameters []string, pokedex map[string]internal.PokemonResponse) error {
 
 	if config.Previous == nil {
 		fmt.Print("You are on first page\n")
@@ -90,10 +91,56 @@ func mapbCallback(config *Config, cache *internal.Cache) error {
 	return nil
 }
 
+func exploreLocationCallback(_ *Config, cache *internal.Cache, parameters []string, pokedex map[string]internal.PokemonResponse) error {
+	if len(parameters) == 0 {
+		fmt.Print("No location specified\n")
+		return nil
+	}
+	name := parameters[0]
+	mapData, err := internal.GetPokemonApiExploreLocation(name, cache)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Exploring %s...\n", name)
+	fmt.Print("Found Pokemon:\n")
+
+	for _, pokemon := range mapData.PokemonEncounters {
+		fmt.Printf("- %s\n", pokemon.Pokemon.Name)
+	}
+
+	return nil
+}
+
+func catchCallback(_ *Config, cache *internal.Cache, parameters []string, pokedex map[string]internal.PokemonResponse) error {
+	if len(parameters) == 0 {
+		fmt.Print("No location specified\n")
+		return nil
+	}
+	name := parameters[0]
+	pokemonData, err := internal.GetPokemon(name, cache)
+
+	fmt.Printf("Throwing a Pokeball at %s...\n", name)
+	if err != nil {
+		return err
+	}
+
+	catchResult := rand.Intn(pokemonData.BaseExperience)
+
+	if catchResult < pokemonData.BaseExperience-30 {
+		fmt.Printf("%s escaped!\n", name)
+		return nil
+	}
+
+	pokedex[name] = pokemonData
+	fmt.Printf("%s was caught!\n", name)
+	return nil
+}
+
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(config *Config, cache *internal.Cache) error
+	callback    func(config *Config, cache *internal.Cache, parameters []string, pokedex map[string]internal.PokemonResponse) error
 }
 
 // Declare the map variable
@@ -120,6 +167,16 @@ func init() {
 			name:        "mapb",
 			description: "gives 20 prev locations",
 			callback:    mapbCallback,
+		},
+		"explore": {
+			name:        "explore",
+			description: "explores location, provides encountered pokemons",
+			callback:    exploreLocationCallback,
+		},
+		"catch": {
+			name:        "catch",
+			description: "catch pokemon",
+			callback:    catchCallback,
 		},
 	}
 }
